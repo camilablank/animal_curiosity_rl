@@ -1,7 +1,7 @@
 import numpy as np
 from labyrinth_env import LabyrinthEnv
 
-# --- Value Iteration Algorithm ---
+# Value iteration algorithm
 def value_iteration(env, gamma=0.9, theta=1e-6):
     """
     Performs Value Iteration to find the optimal value function and policy for the LabyrinthEnv.
@@ -65,7 +65,6 @@ def value_iteration(env, gamma=0.9, theta=1e-6):
 
 
             # Update the value function for state 's' using the Bellman Optimality Equation
-            # V(s) = max_a Q(s,a)
             V_new[s] = np.max(q_values)
 
             # Calculate the maximum change across all states
@@ -78,7 +77,7 @@ def value_iteration(env, gamma=0.9, theta=1e-6):
         if delta < theta:
             break
 
-    # Policy Extraction: Once V has converged, derive the optimal policy
+    # Policy extraction
     for s in range(n_states):
         q_values = np.zeros(n_actions)
         for a in range(n_actions):
@@ -94,30 +93,25 @@ def value_iteration(env, gamma=0.9, theta=1e-6):
     print(f"Value Iteration converged in {iteration} iterations.")
     return V, policy
 
-# --- Main Execution ---
+# Main execution
 if __name__ == "__main__":
     print("--- Running Value Iteration for a single, fixed rewarding node ---")
     # Define environment parameters
     n_states = 63
     reward_state_fixed = 62 # Example: The last state is the reward state
 
-    # 1. Instantiate the environment with a single fixed reward state
     env_fixed_reward = LabyrinthEnv(n_states=n_states, reward_state=reward_state_fixed)
 
-    # 2. Define parameters for Value Iteration
     gamma = 0.99  # Discount factor
     theta = 1e-9  # Convergence threshold
 
-    # 3. Run Value Iteration
+    # Run Value Iteration
     optimal_V_fixed, optimal_policy_fixed = value_iteration(env_fixed_reward, gamma, theta)
 
-    # 4. Analyze Results
     print("\nOptimal Value Function (V) for fixed reward state:")
     print(np.round(optimal_V_fixed, 3)) # Round for better readability
     print("\nOptimal Policy (0: left, 1: right, 2: reverse, 3: stay) for fixed reward state:")
     print(optimal_policy_fixed)
-
-    # 5. Test the derived policy (optional)
     print("\n--- Testing the Optimal Policy for fixed reward state ---")
     start_state = env_fixed_reward.home_state
     current_state = env_fixed_reward.reset(start_state)
@@ -146,8 +140,7 @@ if __name__ == "__main__":
 
     print("\n\n--- Running Value Iteration for four randomly switching rewarding nodes (using Expected Rewards) ---")
 
-    # Define your four possible reward locations
-    # Make sure these are valid states within n_states=63 (0 to 62)
+    # Define four possible reward locations (these are just examples)
     n_states_stochastic = 63
     possible_reward_nodes = [15, 30, 45, 60] # Example states within 0-62
     reward_value_at_target = 1 # Reward received if you land on the active target
@@ -166,9 +159,6 @@ if __name__ == "__main__":
     print(f"Example: Expected reward at state {possible_reward_nodes[0]}: {R_expected[possible_reward_nodes[0]]:.3f}")
     print(f"Example: Expected reward at a non-reward state (e.g., 0): {R_expected[0]:.3f}")
 
-
-    # Instantiate the environment, passing the R_expected as reward_map
-    # The reward_state (e.g., 0) is a dummy value here as it will be ignored because reward_map is provided.
     env_stochastic_reward = LabyrinthEnv(n_states=n_states_stochastic, reward_state=0, reward_map=R_expected)
 
     # Run Value Iteration with the environment configured for expected rewards
