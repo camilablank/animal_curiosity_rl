@@ -1,13 +1,10 @@
 import os
 import sys
 
-# Get the directory of the current script (mouse_traj_figure.py)
 script_dir = os.path.dirname(__file__)
 
-# Get the parent directory (your project root: animal_curiosity_rl)
 project_root = os.path.abspath(os.path.join(script_dir, os.pardir))
 
-# Add the project root to sys.path
 if project_root not in sys.path:
     sys.path.insert(0, project_root) # Insert at the beginning for priority
 
@@ -49,7 +46,7 @@ except Exception as e:
     print(f"An error occurred while loading the CSV: {e}")
     exit()
 
-# 2. Access the 'nose' data.
+# Access nose data
 nose_cols = [col for col in df.columns if col[1] == 'nose' and col[2] in ['x', 'y']] # Be explicit with 'x' and 'y'
 
 if len(nose_cols) >= 2:
@@ -90,39 +87,33 @@ if len(nose_x_raw_clean) == 0:
     print("No valid nose coordinate data found after cleaning. Cannot plot trajectory.")
     exit()
 
-# 3. Create the maze object
+# Create maze object
 maze_size = 6 # Set to an even number, typically 6 for this maze type
 maze = NewMaze(maze_size)
 
-# 4. Determine maze plot limits and perform SCALING
+# Determine maze plot limits
 min_maze_x = np.min(maze.xc)
 max_maze_x = np.max(maze.xc)
 min_maze_y = np.min(maze.yc)
 max_maze_y = np.max(maze.yc)
 
-# Determine the range of your raw trajectory data
+# Determine the range of raw trajectory data
 raw_x_min = np.min(nose_x_raw_clean)
 raw_x_max = np.max(nose_x_raw_clean)
 raw_y_min = np.min(nose_y_raw_clean)
 raw_y_max = np.max(nose_y_raw_clean)
 
 # Adjust the raw data range to make trajectory wider horizontally
-# Expand the X range by 20% while keeping it centered
 x_range = raw_x_max - raw_x_min
 x_center = (raw_x_max + raw_x_min) / 2
-raw_x_min = x_center - x_range * 0.6  # Expand range by 20%
-raw_x_max = x_center + x_range * 0.6  # Expand range by 20%
+raw_x_min = x_center - x_range * 0.6
+raw_x_max = x_center + x_range * 0.6
 
-# Calculate the scaling factor and offset to map raw data to maze coordinates
-# This attempts to fit the entire trajectory's bounding box into the maze's bounding box.
-# Add a small epsilon to denominator to prevent division by zero if range is 0
 epsilon = 1e-9
 
-# Calculate scaling factors to fit trajectory into maze
 scale_x = (max_maze_x - min_maze_x) / (raw_x_max - raw_x_min + epsilon)
 scale_y = (max_maze_y - min_maze_y) / (raw_y_max - raw_y_min + epsilon)
 
-# Calculate offsets to center trajectory in maze
 offset_x = min_maze_x + (max_maze_x - min_maze_x) / 2 - (raw_x_min + (raw_x_max - raw_x_min) / 2) * scale_x
 offset_y = min_maze_y + (max_maze_y - min_maze_y) / 2 - (raw_y_min + (raw_y_max - raw_y_min) / 2) * scale_y
 
@@ -130,16 +121,15 @@ offset_y = min_maze_y + (max_maze_y - min_maze_y) / 2 - (raw_y_min + (raw_y_max 
 nose_x_scaled = nose_x_raw_clean * scale_x + offset_x
 nose_y_scaled = nose_y_raw_clean * scale_y + offset_y
 
-# Expand trajectory vertically while keeping it centered
+# Expand trajectory vertically
 vertical_expansion = 1.15  # Make it 15% taller
 traj_center_y = np.mean(nose_y_scaled)
 nose_y_scaled = (nose_y_scaled - traj_center_y) * vertical_expansion + traj_center_y
 
-# Expand trajectory horizontally while keeping it centered
+# Expand trajectory horizontally
 horizontal_expansion = 1.08  # Make it 8% wider
 traj_center_x = np.mean(nose_x_scaled)
 nose_x_scaled = (nose_x_scaled - traj_center_x) * horizontal_expansion + traj_center_x
-
 
 print(f"\nRaw X range: [{raw_x_min:.2f}, {raw_x_max:.2f}]")
 print(f"Raw Y range: [{raw_y_min:.2f}, {raw_y_max:.2f}]")
@@ -150,7 +140,7 @@ print(f"Applied Y scale: {scale_y:.2f}, offset: {offset_y:.2f}")
 print(f"Scaled X range: [{np.min(nose_x_scaled):.2f}, {np.max(nose_x_scaled):.2f}]")
 print(f"Scaled Y range: [{np.min(nose_y_scaled):.2f}, {np.max(nose_y_scaled):.2f}]")
 
-# Rotate trajectory 90 degrees counterclockwise (to the left)
+# Rotate trajectory
 temp_x = nose_x_scaled.copy()
 temp_y = nose_y_scaled.copy()
 nose_x_scaled = max_maze_y - temp_y + min_maze_y
@@ -160,53 +150,37 @@ nose_y_scaled = temp_x
 x_plot_lim = [min_maze_x - 1, max_maze_x + 1]
 y_plot_lim = [min_maze_y - 1, max_maze_y + 1]
 
-
-# 5. Create the plot figure and axes
+# Create the plot figure and axes
 fig_size = 8
 fig, ax = plt.subplots(figsize=(fig_size, fig_size))
 
-# 6. Plot the maze walls
 maze_axes = PlotMazeWall(maze, axes=ax, figsize=fig_size)
 
-# Prepare data for LineCollection: format points into segments
 points = np.array([nose_x_scaled, nose_y_scaled]).T.reshape(-1, 1, 2)
 segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-# Create a "time" array for coloring based on sequence (index of each point)
-# This represents the progression from the start to the end of the trajectory.
 time_for_coloring = np.arange(len(nose_x_scaled))
-
-# Choose a base colormap (e.g., 'viridis')
-# 'viridis' goes from purple (low value/entry) to yellow (high value/exit)
-# Use '_r' to reverse it if you want yellow for entry and purple for exit (like in your example image)
 base_cmap = cm.get_cmap('viridis') # Use regular viridis instead of viridis_r
 
-# Truncate the colormap if needed (e.g., to avoid very light or very dark ends)
-# Adjust minval/maxval as desired, e.g., (0.1, 0.9) to cut off 10% from each end
 display_cmap = generate_colormap(base_cmap, minval=0.0, maxval=1.0) # Using full range for now
 
-# Normalize the time points to the range [0, 1] for the colormap
 norm = Normalize(vmin=time_for_coloring.min(), vmax=time_for_coloring.max())
 
 # Create the LineCollection
-# The 'array' argument takes the data values that will be mapped to colors
 lc = LineCollection(segments.tolist(), cmap=display_cmap, norm=norm, linewidth=2)
 lc.set_array(time_for_coloring) # Assign the normalized time values to color the segments
 
 # Add the LineCollection to the maze axes
 line = maze_axes.add_collection(lc)
 
-# Add a colorbar to explain the color mapping
-# Create a separate axes for the colorbar
+# Add a colorbar
 cbar_ax = fig.add_axes((0.92, 0.25, 0.02, 0.5)) # Use tuple instead of list
 cbar = fig.colorbar(line, cax=cbar_ax)
 cbar.set_label('Time in Trajectory', rotation=270, labelpad=15) # Label the colorbar
 cbar.set_ticks([time_for_coloring.min(), time_for_coloring.max()])
 cbar.set_ticklabels(['Entry', 'Exit']) # Label the ends of the colorbar
 
-
-
-# Ensure plot limits are set by the maze, and aspect ratio is equal
+# Ensure plot limits are set by the maze
 set_axes(maze_axes,
          xlabel='X Position (Scaled Maze Units)',
          ylabel='Y Position (Scaled Maze Units)',
@@ -227,7 +201,7 @@ set_axes(maze_axes,
          equal=True
         )
 
-# Optional: Mark start and end points of the trajectory with specific colors
+# Mark start and end points of the trajectory with specific colors
 if len(nose_x_scaled) > 0:
     # Get the specific colors for the start and end points from the colormap
     start_color = 'red'
