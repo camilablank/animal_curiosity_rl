@@ -1,0 +1,1 @@
+This repo contains the code to emulate how animals learn to navigate complex environments, such as mazes, over time using an RL agent. Unlike traditional approaches that focus only on post-learning behavior, this project captures the learning process itself, integrating both extrinsic and intrinsic rewards to track and reproduce the animal's evolving world model.
