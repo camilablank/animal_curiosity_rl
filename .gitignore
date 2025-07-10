@@ -1,5 +1,5 @@
 # Virtual environment
-rlenv/
+animal_curiosity_env/
 __pycache__/
 *.pyc
 *.egg-info/
